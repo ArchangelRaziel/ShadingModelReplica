@@ -1,0 +1,4 @@
+repository "ShadingModelReplica@infiniteforest@cloud.cn"
+  path "/"
+    br "/main"
+    co "/main"
