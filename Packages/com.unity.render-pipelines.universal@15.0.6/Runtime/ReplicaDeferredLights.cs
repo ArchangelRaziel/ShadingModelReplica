@@ -18,7 +18,7 @@ using static Unity.Mathematics.math;
 namespace UnityEngine.Rendering.Universal.Internal
 {
     // Customization per platform.
-    static class DeferredConfig
+    static class ReplicaDeferredConfig
     {
         internal static bool IsOpenGL { get; set; }
 
@@ -27,14 +27,14 @@ namespace UnityEngine.Rendering.Universal.Internal
         internal static bool IsDX10 { get; set; }
     }
 
-    internal enum LightFlag
+    internal enum ReplicaLightFlag
     {
         // Keep in sync with kLightFlagSubtractiveMixedLighting.
         SubtractiveMixedLighting = 4
     }
 
     // Manages deferred lights.
-    internal class UnrealDeferredLights
+    internal class ReplicaDeferredLights
     {
         internal static class ShaderConstants
         {
@@ -118,37 +118,41 @@ namespace UnityEngine.Rendering.Universal.Internal
         };
 
         static readonly ushort k_InvalidLightOffset = 0xFFFF;
-        static readonly string k_SetupLights = "SetupLights";
-        static readonly string k_DeferredPass = "Deferred Pass";
-        static readonly string k_DeferredStencilPass = "Deferred Shading (Stencil)";
-        static readonly string k_DeferredFogPass = "Deferred Fog";
-        static readonly string k_ClearStencilPartial = "Clear Stencil Partial";
-        static readonly string k_SetupLightConstants = "Setup Light Constants";
+        static readonly string k_SetupLights = "Replica SetupLights";
+        static readonly string k_DeferredPass = "Replica Deferred Pass";
+        static readonly string k_DeferredStencilPass = "Replica Deferred Shading (Stencil)";
+        static readonly string k_DeferredFogPass = "Replica Deferred Fog";
+        static readonly string k_ClearStencilPartial = "Replica Clear Stencil Partial";
+        static readonly string k_SetupLightConstants = "Replica Setup Light Constants";
         static readonly float kStencilShapeGuard = 1.06067f; // stencil geometric shapes must be inflated to fit the analytic shapes.
         private static readonly ProfilingSampler m_ProfilingSetupLights = new ProfilingSampler(k_SetupLights);
         private static readonly ProfilingSampler m_ProfilingDeferredPass = new ProfilingSampler(k_DeferredPass);
         private static readonly ProfilingSampler m_ProfilingSetupLightConstants = new ProfilingSampler(k_SetupLightConstants);
 
-        internal int GBufferAlbedoIndex { get { return 0; } }
-        internal int GBufferSpecularMetallicIndex { get { return 1; } }
-        internal int GBufferNormalSmoothnessIndex { get { return 2; } }
-        internal int GBufferLightingIndex { get { return 3; } }
-        internal int GbufferDepthIndex { get { return UseRenderPass ? GBufferLightingIndex + 1 : -1; } }
-        internal int GBufferRenderingLayers { get { return UseRenderingLayers ? GBufferLightingIndex + (UseRenderPass ? 1 : 0) + 1 : -1; } }
+        // GI + Emissive
+        internal int GBufferAIndex { get { return 0; } } // Albedo.xyz (sRGB) + MaterialFlags.w
+        // Encoded Normal.xy + ShadingModelID.z + PerObject Data.w
+        internal int GBufferBIndex { get { return 1; } } // Specular.xyz + Metallic.w (Occlusion?)
+        // Metallic.x + Specular.y + Roughness.z + Indirect Irradiance.w
+        internal int GBufferCIndex { get { return 2; } } // Normal.xyz + Smoothness.w
+        // Base Color.xyz + Precomputed Shadow.w
+        internal int GBufferDIndex { get { return 3; } } // Emissive/GI/Lighting
+        internal int GbufferDepthIndex { get { return UseRenderPass ? 3 + 1 : -1; } }
+        internal int GBufferRenderingLayers { get { return UseRenderingLayers ? 3 + (UseRenderPass ? 1 : 0) + 1 : -1; } }
         // Shadow Mask can change at runtime. Because of this it needs to come after the non-changing buffers.
-        internal int GBufferShadowMask { get { return UseShadowMask ? GBufferLightingIndex + (UseRenderPass ? 1 : 0) + (UseRenderingLayers ? 1 : 0) + 1 : -1; } }
+        internal int GBufferShadowMask { get { return UseShadowMask ? 3 + (UseRenderPass ? 1 : 0) + (UseRenderingLayers ? 1 : 0) + 1 : -1; } }
         // Color buffer count (not including dephStencil).
         internal int GBufferSliceCount { get { return 4 + (UseRenderPass ? 1 : 0) + (UseShadowMask ? 1 : 0) + (UseRenderingLayers ? 1 : 0); } }
 
         internal GraphicsFormat GetGBufferFormat(int index)
         {
-            if (index == GBufferAlbedoIndex) // sRGB albedo, materialFlags
+            if (index == GBufferAIndex) // sRGB albedo, materialFlags
                 return QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
-            else if (index == GBufferSpecularMetallicIndex) // sRGB specular, [unused]
+            else if (index == GBufferBIndex) // sRGB specular, [unused]
                 return GraphicsFormat.R8G8B8A8_UNorm;
-            else if (index == GBufferNormalSmoothnessIndex)
+            else if (index == GBufferCIndex)
                 return this.AccurateGbufferNormals ? GraphicsFormat.R8G8B8A8_UNorm : GraphicsFormat.R8G8B8A8_SNorm; // normal normal normal packedSmoothness
-            else if (index == GBufferLightingIndex) // Emissive+baked: Most likely B10G11R11_UFloatPack32 or R16G16B16A16_SFloat
+            else if (index == GBufferDIndex) // Emissive+baked: Most likely B10G11R11_UFloatPack32 or R16G16B16A16_SFloat
                 return GraphicsFormat.None;
             else if (index == GbufferDepthIndex) // Render-pass on mobiles: reading back real depth-buffer is either inefficient (Arm Vulkan) or impossible (Metal).
                 return GraphicsFormat.R32_SFloat;
@@ -246,7 +250,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             public LightCookieManager lightCookieManager;
         }
 
-        internal UnrealDeferredLights(InitParams initParams, bool useNativeRenderPass = false)
+        internal ReplicaDeferredLights (InitParams initParams, bool useNativeRenderPass = false)
         {
             // Cache result for GL platform here. SystemInfo properties are in C++ land so repeated access will be unecessary penalized.
             // They can also only be called from main thread!
@@ -376,7 +380,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 // Release the old handles before creating the new one
                 for (int i = 0; i < this.GbufferRTHandles.Length; ++i)
                 {
-                    if (i == GBufferLightingIndex) // Not on GBuffer to release
+                    if (i == GBufferDIndex) // Not on GBuffer to release
                         continue;
                     this.GbufferRTHandles[i].Release();
                     this.GbufferAttachments[i].Release();
@@ -451,7 +455,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             this.DepthCopyTexture = depthCopyTexture;
 
-            this.GbufferAttachments[this.GBufferLightingIndex] = colorAttachment;
+            this.GbufferAttachments[this.GBufferDIndex] = colorAttachment;
             this.DepthAttachment = depthAttachment;
 
             if (this.DeferredInputAttachments == null && this.UseRenderPass && this.GbufferAttachments.Length >= 3)

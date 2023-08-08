@@ -14,13 +14,13 @@ using UnityEngine.Experimental.Rendering;
 namespace UnityEngine.Rendering.Universal.Internal
 {
     // Render all tiled-based deferred lights.
-    internal class UnrealDeferredPass : ScriptableRenderPass
+    internal class ReplicaDeferredPass : ScriptableRenderPass
     {
-        DeferredLights m_DeferredLights;
+        ReplicaDeferredLights m_DeferredLights;
 
-        public DeferredPass(RenderPassEvent evt, DeferredLights deferredLights)
+        public ReplicaDeferredPass(RenderPassEvent evt, ReplicaDeferredLights deferredLights)
         {
-            base.profilingSampler = new ProfilingSampler(nameof(DeferredPass));
+            base.profilingSampler = new ProfilingSampler(nameof(ReplicaDeferredPass));
             base.renderPassEvent = evt;
             m_DeferredLights = deferredLights;
         }
@@ -28,7 +28,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         // ScriptableRenderPass
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescripor)
         {
-            var lightingAttachment = m_DeferredLights.GbufferAttachments[m_DeferredLights.GBufferLightingIndex];
+            var lightingAttachment = m_DeferredLights.GbufferAttachments[m_DeferredLights.GBufferDIndex];
             var depthAttachment = m_DeferredLights.DepthAttachmentHandle;
             if (m_DeferredLights.UseRenderPass)
                 ConfigureInputAttachments(m_DeferredLights.DeferredInputAttachments, m_DeferredLights.DeferredInputIsTransient);
@@ -49,12 +49,12 @@ namespace UnityEngine.Rendering.Universal.Internal
             internal TextureHandle depth;
 
             internal RenderingData renderingData;
-            internal DeferredLights deferredLights;
+            internal ReplicaDeferredLights deferredLights;
         }
 
         internal void Render(RenderGraph renderGraph, TextureHandle color, TextureHandle depth, TextureHandle[] gbuffer, ref RenderingData renderingData)
         {
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Deferred Lighting Pass", out var passData,
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Replica Deferred Lighting Pass", out var passData,
                 base.profilingSampler))
             {
                 passData.color = builder.UseTextureFragment(color, 0, IBaseRenderGraphBuilder.AccessFlags.Write);
@@ -64,7 +64,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
                 for (int i = 0; i < gbuffer.Length; ++i)
                 {
-                    if (i != m_DeferredLights.GBufferLightingIndex)
+                    if (i != m_DeferredLights.GBufferDIndex)
                         builder.UseTexture(gbuffer[i], IBaseRenderGraphBuilder.AccessFlags.Read);
                 }
 
