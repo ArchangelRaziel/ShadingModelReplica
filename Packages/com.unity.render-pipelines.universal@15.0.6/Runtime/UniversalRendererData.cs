@@ -10,6 +10,17 @@ using UnityEngine.Assertions;
 namespace UnityEngine.Rendering.Universal
 {
     /// <summary>
+    /// Shading models & GBuffer format.
+    /// </summary>
+    public enum GBUFFERMode
+    {
+        /// <summary>Original Unity mode</summary>
+        Unity,
+        /// <summary>UE5.1 Replica</summary>
+        Unreal
+    }
+
+    /// <summary>
     /// Defines if Unity will copy the depth that can be bound in shaders as _CameraDepthTexture after the opaques pass or after the transparents pass.
     /// </summary>
     public enum CopyDepthMode
@@ -161,6 +172,7 @@ namespace UnityEngine.Rendering.Universal
 
         const int k_LatestAssetVersion = 2;
         [SerializeField] int m_AssetVersion = 0;
+        [SerializeField] GBUFFERMode m_GBufferMode = GBUFFERMode.Unity; // Default Unity.
         [SerializeField] LayerMask m_OpaqueLayerMask = -1;
         [SerializeField] LayerMask m_TransparentLayerMask = -1;
         [SerializeField] StencilStateData m_DefaultStencilState = new StencilStateData() { passOperation = StencilOp.Replace }; // This default state is compatible with deferred renderer.
@@ -184,6 +196,19 @@ namespace UnityEngine.Rendering.Universal
                 ReloadAllNullProperties();
             }
             return new UniversalRenderer(this);
+        }
+
+        /// <summary>
+        /// Shading models & GBuffer format mode.
+        /// </summary>
+        public GBUFFERMode gbufferMode
+        {
+            get => m_GBufferMode;
+            set
+            {
+                SetDirty();
+                m_GBufferMode = value;
+            }
         }
 
         /// <summary>

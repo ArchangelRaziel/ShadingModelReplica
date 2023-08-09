@@ -12,6 +12,8 @@ namespace UnityEditor.Rendering.Universal
     {
         private static class Styles
         {
+            public static readonly GUIContent GBufferModeLabel = EditorGUIUtility.TrTextContent("GBuffer format", "Select to use Unity's or Unreal's.");
+
             public static readonly GUIContent RendererTitle = EditorGUIUtility.TrTextContent("Universal Renderer", "Custom Universal Renderer for Universal RP.");
             public static readonly GUIContent PostProcessIncluded = EditorGUIUtility.TrTextContent("Enabled", "Enables the use of post processing effects within the scene. If disabled, Unity excludes post processing renderer Passes, shaders and textures from the build.");
             public static readonly GUIContent PostProcessLabel = EditorGUIUtility.TrTextContent("Data", "The asset containing references to shaders and Textures that the Renderer uses for post-processing.");
@@ -39,6 +41,7 @@ namespace UnityEditor.Rendering.Universal
             public static readonly GUIContent intermediateTextureMode = EditorGUIUtility.TrTextContent("Intermediate Texture", "Controls when URP renders via an intermediate texture.");
         }
 
+        SerializedProperty m_GBufferMode;
         SerializedProperty m_OpaqueLayerMask;
         SerializedProperty m_TransparentLayerMask;
         SerializedProperty m_RenderingMode;
@@ -54,6 +57,7 @@ namespace UnityEditor.Rendering.Universal
 
         private void OnEnable()
         {
+            m_GBufferMode = serializedObject.FindProperty("m_GBufferMode");
             m_OpaqueLayerMask = serializedObject.FindProperty("m_OpaqueLayerMask");
             m_TransparentLayerMask = serializedObject.FindProperty("m_TransparentLayerMask");
             m_RenderingMode = serializedObject.FindProperty("m_RenderingMode");
@@ -72,6 +76,9 @@ namespace UnityEditor.Rendering.Universal
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.PropertyField(m_GBufferMode, Styles.GBufferModeLabel);
 
             EditorGUILayout.Space();
 

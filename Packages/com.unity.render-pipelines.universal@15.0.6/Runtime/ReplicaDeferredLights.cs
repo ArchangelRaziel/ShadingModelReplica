@@ -130,13 +130,13 @@ namespace UnityEngine.Rendering.Universal.Internal
         private static readonly ProfilingSampler m_ProfilingSetupLightConstants = new ProfilingSampler(k_SetupLightConstants);
 
         // GI + Emissive
-        internal int GBufferAIndex { get { return 0; } } // Albedo.xyz (sRGB) + MaterialFlags.w
+        internal int GBufferAIndex { get { return 0; } } 
         // Encoded Normal.xy + ShadingModelID.z + PerObject Data.w
-        internal int GBufferBIndex { get { return 1; } } // Specular.xyz + Metallic.w (Occlusion?)
+        internal int GBufferBIndex { get { return 1; } } 
         // Metallic.x + Specular.y + Roughness.z + Indirect Irradiance.w
-        internal int GBufferCIndex { get { return 2; } } // Normal.xyz + Smoothness.w
+        internal int GBufferCIndex { get { return 2; } } 
         // Base Color.xyz + Precomputed Shadow.w
-        internal int GBufferDIndex { get { return 3; } } // Emissive/GI/Lighting
+        internal int GBufferDIndex { get { return 3; } } 
         internal int GbufferDepthIndex { get { return UseRenderPass ? 3 + 1 : -1; } }
         internal int GBufferRenderingLayers { get { return UseRenderingLayers ? 3 + (UseRenderPass ? 1 : 0) + 1 : -1; } }
         // Shadow Mask can change at runtime. Because of this it needs to come after the non-changing buffers.
@@ -146,14 +146,15 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         internal GraphicsFormat GetGBufferFormat(int index)
         {
-            if (index == GBufferAIndex) // sRGB albedo, materialFlags
-                return QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
-            else if (index == GBufferBIndex) // sRGB specular, [unused]
+            // These format need double check. May not supported in some devices.
+            if (index == GBufferAIndex) // GI + Emissive
+                return GraphicsFormat.B10G11R11_UFloatPack32;
+            else if (index == GBufferBIndex) // Encoded Normal.xy + ShadingModelID.z + PerObject Data.w
+                return GraphicsFormat.A2B10G10R10_UNormPack32; //this.AccurateGbufferNormals ? GraphicsFormat.R8G8B8A8_UNorm : GraphicsFormat.R8G8B8A8_SNorm; 
+            else if (index == GBufferCIndex) // Metallic.x + Specular.y + Roughness.z + Indirect Irradiance.w
                 return GraphicsFormat.R8G8B8A8_UNorm;
-            else if (index == GBufferCIndex)
-                return this.AccurateGbufferNormals ? GraphicsFormat.R8G8B8A8_UNorm : GraphicsFormat.R8G8B8A8_SNorm; // normal normal normal packedSmoothness
-            else if (index == GBufferDIndex) // Emissive+baked: Most likely B10G11R11_UFloatPack32 or R16G16B16A16_SFloat
-                return GraphicsFormat.None;
+            else if (index == GBufferDIndex) // Base Color.xyz + Precomputed Shadow.w
+                return QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
             else if (index == GbufferDepthIndex) // Render-pass on mobiles: reading back real depth-buffer is either inefficient (Arm Vulkan) or impossible (Metal).
                 return GraphicsFormat.R32_SFloat;
             else if (index == GBufferShadowMask) // Optional: shadow mask is outputed in mixed lighting subtractive mode for non-static meshes only

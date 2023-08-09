@@ -97,8 +97,10 @@ namespace UnityEngine.Rendering.Universal
         MainLightShadowCasterPass m_MainLightShadowCasterPass;
         AdditionalLightsShadowCasterPass m_AdditionalLightsShadowCasterPass;
         GBufferPass m_GBufferPass;
+        ReplicaGBufferPass m_RGBufferPass;
         CopyDepthPass m_GBufferCopyDepthPass;
         DeferredPass m_DeferredPass;
+        ReplicaDeferredPass m_RDeferredPass;
         DrawObjectsPass m_RenderOpaqueForwardOnlyPass;
         DrawObjectsPass m_RenderOpaqueForwardPass;
         DrawObjectsWithRenderingLayersPass m_RenderOpaqueForwardWithRenderingLayersPass;
@@ -138,6 +140,8 @@ namespace UnityEngine.Rendering.Universal
 
         ForwardLights m_ForwardLights;
         DeferredLights m_DeferredLights;
+        ReplicaDeferredLights m_RDeferredLights; // Leave it for now.
+        GBUFFERMode m_GBufferMode;
         RenderingMode m_RenderingMode;
         DepthPrimingMode m_DepthPrimingMode;
         CopyDepthMode m_CopyDepthMode;
@@ -221,6 +225,7 @@ namespace UnityEngine.Rendering.Universal
             m_Clustering = data.renderingMode == RenderingMode.ForwardPlus;
             m_ForwardLights = new ForwardLights(forwardInitParams);
             //m_DeferredLights.LightCulling = data.lightCulling;
+            this.m_GBufferMode = data.gbufferMode;
             this.m_RenderingMode = data.renderingMode;
             this.m_DepthPrimingMode = data.depthPrimingMode;
             this.m_CopyDepthMode = data.copyDepthMode;
