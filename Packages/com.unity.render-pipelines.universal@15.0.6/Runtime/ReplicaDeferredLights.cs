@@ -146,7 +146,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         internal GraphicsFormat GetGBufferFormat(int index)
         {
-            if (index == GBufferAIndex) // sRGB albedo, materialFlags
+            if (index == GBufferAIndex) // sRGB albedo, materialFlags.//Note:some devices do not support SRGB
                 return QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm;
             else if (index == GBufferBIndex) // sRGB specular, [unused]
                 return GraphicsFormat.R8G8B8A8_UNorm;
