@@ -45,7 +45,7 @@ MonoBehaviour:
     screenSpaceLensFlare: {fileID: 4800000, guid: 701880fecb344ea4c9cd0db3407ab287, type: 3}
     dataDrivenLensFlare: {fileID: 4800000, guid: 6cda457ac28612740adb23da5d39ea92, type: 3}
   m_AssetVersion: 2
-  m_GBufferMode: 0
+  m_GBufferMode: 1
   m_OpaqueLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295

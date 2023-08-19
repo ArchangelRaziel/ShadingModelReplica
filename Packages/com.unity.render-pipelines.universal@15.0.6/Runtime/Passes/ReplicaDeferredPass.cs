@@ -18,17 +18,17 @@ namespace UnityEngine.Rendering.Universal.Internal
     {
         ReplicaDeferredLights m_DeferredLights;
 
-        public ReplicaDeferredPass(RenderPassEvent evt, ReplicaDeferredLights deferredLights)
+        public ReplicaDeferredPass (RenderPassEvent evt, ReplicaDeferredLights deferredLights)
         {
-            base.profilingSampler = new ProfilingSampler(nameof(ReplicaDeferredPass));
+            base.profilingSampler = new ProfilingSampler(nameof(DeferredPass));
             base.renderPassEvent = evt;
             m_DeferredLights = deferredLights;
         }
 
         // ScriptableRenderPass
-        public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescripor)
+        public override void Configure (CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescripor)
         {
-            var lightingAttachment = m_DeferredLights.GbufferAttachments[m_DeferredLights.GBufferDIndex];
+            var lightingAttachment = m_DeferredLights.GbufferAttachments[m_DeferredLights.GBufferAIndex];
             var depthAttachment = m_DeferredLights.DepthAttachmentHandle;
             if (m_DeferredLights.UseRenderPass)
                 ConfigureInputAttachments(m_DeferredLights.DeferredInputAttachments, m_DeferredLights.DeferredInputIsTransient);
@@ -38,7 +38,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         // ScriptableRenderPass
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        public override void Execute (ScriptableRenderContext context, ref RenderingData renderingData)
         {
             m_DeferredLights.ExecuteDeferredPass(CommandBufferHelpers.GetRasterCommandBuffer(renderingData.commandBuffer), ref renderingData);
         }
@@ -52,9 +52,9 @@ namespace UnityEngine.Rendering.Universal.Internal
             internal ReplicaDeferredLights deferredLights;
         }
 
-        internal void Render(RenderGraph renderGraph, TextureHandle color, TextureHandle depth, TextureHandle[] gbuffer, ref RenderingData renderingData)
+        internal void Render (RenderGraph renderGraph, TextureHandle color, TextureHandle depth, TextureHandle[] gbuffer, ref RenderingData renderingData)
         {
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Replica Deferred Lighting Pass", out var passData,
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Deferred Lighting Pass", out var passData,
                 base.profilingSampler))
             {
                 passData.color = builder.UseTextureFragment(color, 0, IBaseRenderGraphBuilder.AccessFlags.Write);
@@ -64,7 +64,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
                 for (int i = 0; i < gbuffer.Length; ++i)
                 {
-                    if (i != m_DeferredLights.GBufferDIndex)
+                    if (i != m_DeferredLights.GBufferAIndex)
                         builder.UseTexture(gbuffer[i], IBaseRenderGraphBuilder.AccessFlags.Read);
                 }
 
@@ -79,7 +79,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         // ScriptableRenderPass
-        public override void OnCameraCleanup(CommandBuffer cmd)
+        public override void OnCameraCleanup (CommandBuffer cmd)
         {
             m_DeferredLights.OnCameraCleanup(cmd);
         }

@@ -130,13 +130,13 @@ namespace UnityEngine.Rendering.Universal.Internal
         private static readonly ProfilingSampler m_ProfilingSetupLightConstants = new ProfilingSampler(k_SetupLightConstants);
 
         // GI + Emissive
-        internal int GBufferAIndex { get { return 0; } } 
+        internal int GBufferAIndex { get { return 0; } }
         // Encoded Normal.xy + ShadingModelID.z + PerObject Data.w
-        internal int GBufferBIndex { get { return 1; } } 
+        internal int GBufferBIndex { get { return 1; } }
         // Metallic.x + Specular.y + Roughness.z + Indirect Irradiance.w
-        internal int GBufferCIndex { get { return 2; } } 
+        internal int GBufferCIndex { get { return 2; } }
         // Base Color.xyz + Precomputed Shadow.w
-        internal int GBufferDIndex { get { return 3; } } 
+        internal int GBufferDIndex { get { return 3; } }
         internal int GbufferDepthIndex { get { return UseRenderPass ? 3 + 1 : -1; } }
         internal int GBufferRenderingLayers { get { return UseRenderingLayers ? 3 + (UseRenderPass ? 1 : 0) + 1 : -1; } }
         // Shadow Mask can change at runtime. Because of this it needs to come after the non-changing buffers.
@@ -144,7 +144,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         // Color buffer count (not including dephStencil).
         internal int GBufferSliceCount { get { return 4 + (UseRenderPass ? 1 : 0) + (UseShadowMask ? 1 : 0) + (UseRenderingLayers ? 1 : 0); } }
 
-        internal GraphicsFormat GetGBufferFormat(int index)
+        internal GraphicsFormat GetGBufferFormat (int index)
         {
             // These format need double check. May not supported in some devices.
             if (index == GBufferAIndex) // GI + Emissive
@@ -164,6 +164,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             else
                 return GraphicsFormat.None;
         }
+
 
         // This may return different values depending on what lights are rendered for a given frame.
         internal bool UseShadowMask { get { return this.MixedLightingSetup != MixedLightingSetup.None; } }
@@ -271,7 +272,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_LightCookieManager = initParams.lightCookieManager;
         }
 
-        internal void SetupLights(ScriptableRenderContext context, ref RenderingData renderingData)
+        internal void SetupLights (ScriptableRenderContext context, ref RenderingData renderingData)
         {
             Profiler.BeginSample(k_SetupLights);
 
@@ -328,7 +329,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             Profiler.EndSample();
         }
 
-        internal void ResolveMixedLightingMode(ref RenderingData renderingData)
+        internal void ResolveMixedLightingMode (ref RenderingData renderingData)
         {
             // Find the mixed lighting mode. This is the same logic as ForwardLights.
             this.MixedLightingSetup = MixedLightingSetup.None;
@@ -368,20 +369,20 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         // In cases when custom pass is injected between GBuffer and Deferred passes we need to fallback
         // To non-renderpass path in the middle of setup, which means recreating the gbuffer attachments as well due to GBuffer4 used for RenderPass
-        internal void DisableFramebufferFetchInput()
+        internal void DisableFramebufferFetchInput ()
         {
             this.UseRenderPass = false;
             CreateGbufferResources();
         }
 
-        internal void ReleaseGbufferResources()
+        internal void ReleaseGbufferResources ()
         {
             if (this.GbufferRTHandles != null)
             {
                 // Release the old handles before creating the new one
                 for (int i = 0; i < this.GbufferRTHandles.Length; ++i)
                 {
-                    if (i == GBufferDIndex) // Not on GBuffer to release
+                    if (i == GBufferAIndex) // Not on GBuffer to release
                         continue;
                     this.GbufferRTHandles[i].Release();
                     this.GbufferAttachments[i].Release();
@@ -389,7 +390,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        internal void ReAllocateGBufferIfNeeded(RenderTextureDescriptor gbufferSlice, int gbufferIndex)
+        internal void ReAllocateGBufferIfNeeded (RenderTextureDescriptor gbufferSlice, int gbufferIndex)
         {
             if (this.GbufferRTHandles != null)
             {
@@ -405,7 +406,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        internal void CreateGbufferResources()
+        internal void CreateGbufferResources ()
         {
             int gbufferSliceCount = this.GBufferSliceCount;
             if (this.GbufferRTHandles == null || this.GbufferRTHandles.Length != gbufferSliceCount)
@@ -425,7 +426,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        internal void UpdateDeferredInputAttachments()
+        internal void UpdateDeferredInputAttachments ()
         {
             this.DeferredInputAttachments[0] = this.GbufferAttachments[0];
             this.DeferredInputAttachments[1] = this.GbufferAttachments[1];
@@ -433,14 +434,14 @@ namespace UnityEngine.Rendering.Universal.Internal
             this.DeferredInputAttachments[3] = this.GbufferAttachments[4];
         }
 
-        internal bool IsRuntimeSupportedThisFrame()
+        internal bool IsRuntimeSupportedThisFrame ()
         {
             // GBuffer slice count can change depending actual geometry/light being rendered.
             // For instance, we only bind shadowMask RT if the scene supports mix lighting and at least one visible light has subtractive mixed ligting mode.
             return this.GBufferSliceCount <= SystemInfo.supportedRenderTargetCount && !DeferredConfig.IsOpenGL && !DeferredConfig.IsDX10;
         }
 
-        public void Setup(ref RenderingData renderingData,
+        public void Setup (ref RenderingData renderingData,
             AdditionalLightsShadowCasterPass additionalLightsShadowCasterPass,
             bool hasDepthPrepass,
             bool hasNormalPrepass,
@@ -456,7 +457,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             this.DepthCopyTexture = depthCopyTexture;
 
-            this.GbufferAttachments[this.GBufferDIndex] = colorAttachment;
+            this.GbufferAttachments[this.GBufferAIndex] = colorAttachment;
             this.DepthAttachment = depthAttachment;
 
             if (this.DeferredInputAttachments == null && this.UseRenderPass && this.GbufferAttachments.Length >= 3)
@@ -475,12 +476,12 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         // Only used by RenderGraph now as the other Setup call requires providing target handles which isn't working on RG
-        internal void Setup(AdditionalLightsShadowCasterPass additionalLightsShadowCasterPass)
+        internal void Setup (AdditionalLightsShadowCasterPass additionalLightsShadowCasterPass)
         {
             m_AdditionalLightsShadowCasterPass = additionalLightsShadowCasterPass;
         }
 
-        public void OnCameraCleanup(CommandBuffer cmd)
+        public void OnCameraCleanup (CommandBuffer cmd)
         {
             // Disable any global keywords setup in SetupLights().
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings._GBUFFER_NORMALS_OCT, false);
@@ -491,7 +492,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 m_stencilVisLightOffsets.Dispose();
         }
 
-        internal static StencilState OverwriteStencil(StencilState s, int stencilWriteMask)
+        internal static StencilState OverwriteStencil (StencilState s, int stencilWriteMask)
         {
             if (!s.enabled)
             {
@@ -520,7 +521,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             );
         }
 
-        internal static RenderStateBlock OverwriteStencil(RenderStateBlock block, int stencilWriteMask, int stencilRef)
+        internal static RenderStateBlock OverwriteStencil (RenderStateBlock block, int stencilWriteMask, int stencilRef)
         {
             if (!block.stencilState.enabled)
             {
@@ -557,7 +558,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             return block;
         }
 
-        internal void ClearStencilPartial(RasterCommandBuffer cmd)
+        internal void ClearStencilPartial (RasterCommandBuffer cmd)
         {
             if (m_FullscreenMesh == null)
                 m_FullscreenMesh = CreateFullscreenMesh();
@@ -568,7 +569,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        internal void ExecuteDeferredPass(RasterCommandBuffer cmd, ref RenderingData renderingData)
+        internal void ExecuteDeferredPass (RasterCommandBuffer cmd, ref RenderingData renderingData)
         {
             // Workaround for bug.
             // When changing the URP asset settings (ex: shadow cascade resolution), all ScriptableRenderers are recreated but
@@ -606,7 +607,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         // adapted from ForwardLights.SetupShaderLightConstants
-        void SetupShaderLightConstants(CommandBuffer cmd, ref RenderingData renderingData)
+        void SetupShaderLightConstants (CommandBuffer cmd, ref RenderingData renderingData)
         {
             // Main light has an optimized shader path for main light. This will benefit games that only care about a single light.
             // Universal Forward pipeline only supports a single shadow light, if available it will be the main light.
@@ -614,7 +615,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         }
 
         // adapted from ForwardLights.SetupShaderLightConstants
-        void SetupMainLightConstants(CommandBuffer cmd, ref LightData lightData)
+        void SetupMainLightConstants (CommandBuffer cmd, ref LightData lightData)
         {
             if (lightData.mainLightIndex < 0)
                 return;
@@ -630,7 +631,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalInt(ShaderConstants._MainLightLayerMask, (int)lightLayerMask);
         }
 
-        void SetupMatrixConstants(RasterCommandBuffer cmd, ref RenderingData renderingData)
+        void SetupMatrixConstants (RasterCommandBuffer cmd, ref RenderingData renderingData)
         {
             ref CameraData cameraData = ref renderingData.cameraData;
 
@@ -673,7 +674,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalMatrixArray(ShaderConstants._ScreenToWorld, screenToWorld);
         }
 
-        void PrecomputeLights(
+        void PrecomputeLights (
             out NativeArray<ushort> stencilVisLights,
             out NativeArray<ushort> stencilVisLightOffsets,
             ref NativeArray<VisibleLight> visibleLights,
@@ -728,12 +729,12 @@ namespace UnityEngine.Rendering.Universal.Internal
             stencilLightCounts.Dispose();
         }
 
-        bool HasStencilLightsOfType(LightType type)
+        bool HasStencilLightsOfType (LightType type)
         {
             return m_stencilVisLightOffsets[(int)type] != k_InvalidLightOffset;
         }
 
-        void RenderStencilLights(RasterCommandBuffer cmd, ref RenderingData renderingData)
+        void RenderStencilLights (RasterCommandBuffer cmd, ref RenderingData renderingData)
         {
             if (m_stencilVisLights.Length == 0)
                 return;
@@ -761,7 +762,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             Profiler.EndSample();
         }
 
-        void SetAdditionalLightsShadowsKeyword(ref RasterCommandBuffer cmd, ref RenderingData renderingData, bool hasDeferredShadows)
+        void SetAdditionalLightsShadowsKeyword (ref RasterCommandBuffer cmd, ref RenderingData renderingData, bool hasDeferredShadows)
         {
             bool additionalLightShadowsEnabledInAsset = renderingData.shadowData.additionalLightShadowsEnabled;
             bool hasOffVariant = !renderingData.cameraData.renderer.stripShadowsOffVariants;
@@ -774,7 +775,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.AdditionalLightShadows, shouldEnable);
         }
 
-        void RenderStencilDirectionalLights(RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights, int mainLightIndex)
+        void RenderStencilDirectionalLights (RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights, int mainLightIndex)
         {
             if (m_FullscreenMesh == null)
                 m_FullscreenMesh = CreateFullscreenMesh();
@@ -842,7 +843,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.DisableShaderKeyword(ShaderKeywordStrings._DIRECTIONAL);
         }
 
-        void RenderStencilPointLights(RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights)
+        void RenderStencilPointLights (RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights)
         {
             if (m_SphereMesh == null)
                 m_SphereMesh = CreateSphereMesh();
@@ -911,7 +912,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.DisableShaderKeyword(ShaderKeywordStrings._POINT);
         }
 
-        void RenderStencilSpotLights(RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights)
+        void RenderStencilSpotLights (RasterCommandBuffer cmd, ref RenderingData renderingData, NativeArray<VisibleLight> visibleLights)
         {
             if (m_HemisphereMesh == null)
                 m_HemisphereMesh = CreateHemisphereMesh();
@@ -980,7 +981,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.DisableShaderKeyword(ShaderKeywordStrings._SPOT);
         }
 
-        void RenderSSAOBeforeShading(RasterCommandBuffer cmd, ref RenderingData renderingData)
+        void RenderSSAOBeforeShading (RasterCommandBuffer cmd, ref RenderingData renderingData)
         {
             if (m_FullscreenMesh == null)
                 m_FullscreenMesh = CreateFullscreenMesh();
@@ -988,7 +989,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.DrawMesh(m_FullscreenMesh, Matrix4x4.identity, m_StencilDeferredMaterial, 0, m_StencilDeferredPasses[(int)StencilDeferredPasses.SSAOOnly]);
         }
 
-        void RenderFog(RasterCommandBuffer cmd, ref RenderingData renderingData)
+        void RenderFog (RasterCommandBuffer cmd, ref RenderingData renderingData)
         {
             // Legacy fog does not work in orthographic mode.
             if (!RenderSettings.fog || renderingData.cameraData.camera.orthographic)
@@ -1004,7 +1005,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        void InitStencilDeferredMaterial()
+        void InitStencilDeferredMaterial ()
         {
             if (m_StencilDeferredMaterial == null)
                 return;
@@ -1033,7 +1034,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_StencilDeferredMaterial.SetFloat(ShaderConstants._ClearStencilWriteMask, (float)StencilUsage.MaterialMask);
         }
 
-        static Mesh CreateSphereMesh()
+        static Mesh CreateSphereMesh ()
         {
             // This icosaedron has been been slightly inflated to fit an unit sphere.
             // This is the same geometry as built-in deferred.
@@ -1090,7 +1091,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             return mesh;
         }
 
-        static Mesh CreateHemisphereMesh()
+        static Mesh CreateHemisphereMesh ()
         {
             // TODO reorder for pre&post-transform cache optimisation.
             // This capped hemisphere shape is in unit dimensions. It will be slightly inflated in the vertex shader
@@ -1147,7 +1148,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             return mesh;
         }
 
-        static Mesh CreateFullscreenMesh()
+        static Mesh CreateFullscreenMesh ()
         {
             // TODO reorder for pre&post-transform cache optimisation.
             // Simple full-screen triangle.

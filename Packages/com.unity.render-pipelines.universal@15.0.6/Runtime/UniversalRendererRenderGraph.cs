@@ -421,11 +421,26 @@ namespace UnityEngine.Rendering.Universal
             m_RenderingLayerProvidesRenderObjectPass = m_RequiresRenderingLayer && renderingModeActual == RenderingMode.Forward && m_RenderingLayersEvent == RenderingLayerUtils.Event.Opaque;
             m_RenderingLayerProvidesByDepthNormalPass = m_RequiresRenderingLayer && m_RenderingLayersEvent == RenderingLayerUtils.Event.DepthNormalPrePass;
 
-            if (m_DeferredLights != null)
+            if (m_GBufferMode == GBUFFERMode.Unity)
             {
-                m_DeferredLights.RenderingLayerMaskSize = m_RenderingLayersMaskSize;
-                m_DeferredLights.UseDecalLayers = m_RequiresRenderingLayer;
+                /*
+                if (m_DeferredLights != null)
+                {
+                    m_DeferredLights.RenderingLayerMaskSize = m_RenderingLayersMaskSize;
+                    m_DeferredLights.UseDecalLayers = m_RequiresRenderingLayer;
+                }
+                */
             }
+            else if (m_GBufferMode == GBUFFERMode.Unreal)
+            {
+                if (m_RDeferredLights != null)
+                {
+                    m_RDeferredLights.RenderingLayerMaskSize = m_RenderingLayersMaskSize;
+                    m_RDeferredLights.UseDecalLayers = m_RequiresRenderingLayer;
+                }
+
+            }
+
         }
 
         internal override void OnRecordRenderGraph(RenderGraph renderGraph, ScriptableRenderContext context, ref RenderingData renderingData)
@@ -468,7 +483,10 @@ namespace UnityEngine.Rendering.Universal
         internal override void OnFinishRenderGraphRendering(ref RenderingData renderingData)
         {
             if (this.renderingModeActual == RenderingMode.Deferred)
-                m_DeferredPass.OnCameraCleanup(renderingData.commandBuffer);
+            {
+                //m_DeferredPass.OnCameraCleanup(renderingData.commandBuffer);
+                m_RDeferredPass.OnCameraCleanup(renderingData.commandBuffer);
+            }
 
             m_CopyDepthPass.OnCameraCleanup(renderingData.commandBuffer);
         }
@@ -597,32 +615,67 @@ namespace UnityEngine.Rendering.Universal
 
             if (isDeferred)
             {
-                m_DeferredLights.Setup(m_AdditionalLightsShadowCasterPass);
-                if (m_DeferredLights != null)
+                if (m_GBufferMode == GBUFFERMode.Unity)
                 {
-                    m_DeferredLights.UseRenderPass = false;
-                    m_DeferredLights.HasNormalPrepass = renderPassInputs.requiresNormalsTexture;
-                    m_DeferredLights.HasDepthPrepass = requiresDepthPrepass;
-                    m_DeferredLights.ResolveMixedLightingMode(ref renderingData);
-                    m_DeferredLights.IsOverlay = cameraData.renderType == CameraRenderType.Overlay;
+                    /*
+                    m_DeferredLights.Setup(m_AdditionalLightsShadowCasterPass);
+                    if (m_DeferredLights != null)
+                    {
+                        m_DeferredLights.UseRenderPass = false;
+                        m_DeferredLights.HasNormalPrepass = renderPassInputs.requiresNormalsTexture;
+                        m_DeferredLights.HasDepthPrepass = requiresDepthPrepass;
+                        m_DeferredLights.ResolveMixedLightingMode(ref renderingData);
+                        m_DeferredLights.IsOverlay = cameraData.renderType == CameraRenderType.Overlay;
+                    }
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.BeforeRenderingGbuffer);
+
+                    m_GBufferPass.Render(renderGraph, activeColorTexture, activeDepthTexture, ref renderingData, resources);
+                    TextureHandle cameraDepthTexture = resources.GetTexture(UniversalResource.CameraDepthTexture);
+                    m_GBufferCopyDepthPass.Render(renderGraph, cameraDepthTexture, activeDepthTexture, ref renderingData, "GBuffer Depth Copy");
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingGbuffer, RenderPassEvent.BeforeRenderingDeferredLights);
+
+                    TextureHandle[] gbuffer = m_GBufferPass.GetFrameResourcesGBufferArray(resources);
+                    m_DeferredPass.Render(renderGraph, activeColorTexture, activeDepthTexture, gbuffer, ref renderingData);
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingDeferredLights, RenderPassEvent.BeforeRenderingOpaques);
+
+                    TextureHandle mainShadowsTexture = resources.GetTexture(UniversalResource.MainShadowsTexture);
+                    TextureHandle additionalShadowsTexture = resources.GetTexture(UniversalResource.AdditionalShadowsTexture);
+                    m_RenderOpaqueForwardOnlyPass.Render(renderGraph, activeColorTexture, activeDepthTexture, mainShadowsTexture, additionalShadowsTexture, ref renderingData);
+                    */
+                }
+                else if (m_GBufferMode == GBUFFERMode.Unreal)
+                {
+                    m_RDeferredLights.Setup(m_AdditionalLightsShadowCasterPass);
+                    if (m_RDeferredLights != null)
+                    {
+                        m_RDeferredLights.UseRenderPass = false;
+                        m_RDeferredLights.HasNormalPrepass = renderPassInputs.requiresNormalsTexture;
+                        m_RDeferredLights.HasDepthPrepass = requiresDepthPrepass;
+                        m_RDeferredLights.ResolveMixedLightingMode(ref renderingData);
+                        m_RDeferredLights.IsOverlay = cameraData.renderType == CameraRenderType.Overlay;
+                    }
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.BeforeRenderingGbuffer);
+
+                    m_RGBufferPass.Render(renderGraph, activeColorTexture, activeDepthTexture, ref renderingData, resources);
+                    TextureHandle cameraDepthTexture = resources.GetTexture(UniversalResource.CameraDepthTexture);
+                    m_GBufferCopyDepthPass.Render(renderGraph, cameraDepthTexture, activeDepthTexture, ref renderingData, "GBuffer Depth Copy");
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingGbuffer, RenderPassEvent.BeforeRenderingDeferredLights);
+
+                    TextureHandle[] gbuffer = m_RGBufferPass.GetFrameResourcesGBufferArray(resources);
+                    m_RDeferredPass.Render(renderGraph, activeColorTexture, activeDepthTexture, gbuffer, ref renderingData);
+
+                    RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingDeferredLights, RenderPassEvent.BeforeRenderingOpaques);
+
+                    TextureHandle mainShadowsTexture = resources.GetTexture(UniversalResource.MainShadowsTexture);
+                    TextureHandle additionalShadowsTexture = resources.GetTexture(UniversalResource.AdditionalShadowsTexture);
+                    m_RenderOpaqueForwardOnlyPass.Render(renderGraph, activeColorTexture, activeDepthTexture, mainShadowsTexture, additionalShadowsTexture, ref renderingData);
                 }
 
-                RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.BeforeRenderingGbuffer);
-
-                m_GBufferPass.Render(renderGraph, activeColorTexture, activeDepthTexture, ref renderingData, resources);
-                TextureHandle cameraDepthTexture = resources.GetTexture(UniversalResource.CameraDepthTexture);
-                m_GBufferCopyDepthPass.Render(renderGraph, cameraDepthTexture, activeDepthTexture, ref renderingData, "GBuffer Depth Copy");
-
-                RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingGbuffer, RenderPassEvent.BeforeRenderingDeferredLights);
-
-                TextureHandle[] gbuffer = m_GBufferPass.GetFrameResourcesGBufferArray(resources);
-                m_DeferredPass.Render(renderGraph, activeColorTexture, activeDepthTexture, gbuffer, ref renderingData);
-
-                RecordCustomRenderGraphPasses(renderGraph, ref renderingData, RenderPassEvent.AfterRenderingDeferredLights, RenderPassEvent.BeforeRenderingOpaques);
-
-                TextureHandle mainShadowsTexture = resources.GetTexture(UniversalResource.MainShadowsTexture);
-                TextureHandle additionalShadowsTexture = resources.GetTexture(UniversalResource.AdditionalShadowsTexture);
-                m_RenderOpaqueForwardOnlyPass.Render(renderGraph, activeColorTexture, activeDepthTexture, mainShadowsTexture, additionalShadowsTexture, ref renderingData);
             }
             else
             {
@@ -899,8 +952,10 @@ namespace UnityEngine.Rendering.Universal
             // Find compatible render-target format for storing normals.
             // Shader code outputs normals in signed format to be compatible with deferred gbuffer layout.
             // Deferred gbuffer format is signed so that normals can be blended for terrain geometry.
-            var normalsName = this.renderingModeActual != RenderingMode.Deferred ? "_CameraNormalsTexture" : DeferredLights.k_GBufferNames[m_DeferredLights.GBufferNormalSmoothnessIndex];
-            normalDescriptor.graphicsFormat = this.renderingModeActual != RenderingMode.Deferred ? DepthNormalOnlyPass.GetGraphicsFormat() : m_DeferredLights.GetGBufferFormat(m_DeferredLights.GBufferNormalSmoothnessIndex);
+            //var normalsName = this.renderingModeActual != RenderingMode.Deferred ? "_CameraNormalsTexture" : DeferredLights.k_GBufferNames[m_DeferredLights.GBufferNormalSmoothnessIndex];
+            //normalDescriptor.graphicsFormat = this.renderingModeActual != RenderingMode.Deferred ? DepthNormalOnlyPass.GetGraphicsFormat() : m_DeferredLights.GetGBufferFormat(m_DeferredLights.GBufferNormalSmoothnessIndex);
+            var normalsName = this.renderingModeActual != RenderingMode.Deferred ? "_CameraNormalsTexture" : DeferredLights.k_GBufferNames[m_RDeferredLights.GBufferBIndex];
+            normalDescriptor.graphicsFormat = this.renderingModeActual != RenderingMode.Deferred ? DepthNormalOnlyPass.GetGraphicsFormat() : m_RDeferredLights.GetGBufferFormat(m_RDeferredLights.GBufferBIndex);
             TextureHandle cameraNormalsTexture = CreateRenderGraphTexture(renderGraph, normalDescriptor, normalsName, true);
             resources.SetTexture(UniversalResource.CameraNormalsTexture, cameraNormalsTexture);
         }
@@ -911,12 +966,28 @@ namespace UnityEngine.Rendering.Universal
             {
                 m_RenderingLayersTextureName = "_CameraRenderingLayersTexture";
 
-                // TODO RENDERGRAPH: deferred optimization
-                if (renderingModeActual == RenderingMode.Deferred && m_DeferredLights.UseRenderingLayers)
+                if (m_GBufferMode == GBUFFERMode.Unity)
                 {
-                    //RTHandle renderingLayersTexture = frameResources.gbuffer[(int)m_DeferredLights.GBufferRenderingLayers];
-                    //m_RenderingLayersTextureName = ""; //renderingLayersTexture.name;
-                    m_RenderingLayersTextureName = DeferredLights.k_GBufferNames[m_DeferredLights.GBufferRenderingLayers];
+                    /*
+                    // TODO RENDERGRAPH: deferred optimization
+                    if (renderingModeActual == RenderingMode.Deferred && m_DeferredLights.UseRenderingLayers)
+                    {
+                        //RTHandle renderingLayersTexture = frameResources.gbuffer[(int)m_DeferredLights.GBufferRenderingLayers];
+                        //m_RenderingLayersTextureName = ""; //renderingLayersTexture.name;
+                        m_RenderingLayersTextureName = DeferredLights.k_GBufferNames[m_DeferredLights.GBufferRenderingLayers];
+                    }
+                    */
+                }
+                else if (m_GBufferMode == GBUFFERMode.Unreal)
+                {
+                    // TODO RENDERGRAPH: deferred optimization
+                    if (renderingModeActual == RenderingMode.Deferred && m_RDeferredLights.UseRenderingLayers)
+                    {
+                        //RTHandle renderingLayersTexture = frameResources.gbuffer[(int)m_DeferredLights.GBufferRenderingLayers];
+                        //m_RenderingLayersTextureName = ""; //renderingLayersTexture.name;
+                        m_RenderingLayersTextureName = DeferredLights.k_GBufferNames[m_RDeferredLights.GBufferRenderingLayers];
+                    }
+
                 }
 
                 RenderTextureDescriptor renderingLayersDescriptor = descriptor;
@@ -928,7 +999,10 @@ namespace UnityEngine.Rendering.Universal
                 // Shader code outputs normals in signed format to be compatible with deferred gbuffer layout.
                 // Deferred gbuffer format is signed so that normals can be blended for terrain geometry.
                 if (renderingModeActual == RenderingMode.Deferred && m_RequiresRenderingLayer)
-                    renderingLayersDescriptor.graphicsFormat = m_DeferredLights.GetGBufferFormat(m_DeferredLights.GBufferRenderingLayers); // the one used by the gbuffer.
+                {
+                    //renderingLayersDescriptor.graphicsFormat = m_DeferredLights.GetGBufferFormat(m_DeferredLights.GBufferRenderingLayers); // the one used by the gbuffer.
+                    renderingLayersDescriptor.graphicsFormat = m_RDeferredLights.GetGBufferFormat(m_RDeferredLights.GBufferRenderingLayers); // the one used by the gbuffer.
+                }
                 else
                     renderingLayersDescriptor.graphicsFormat = RenderingLayerUtils.GetFormat(m_RenderingLayersMaskSize);
 

@@ -83,6 +83,7 @@ Shader "Universal Render Pipeline/Lit"
             "RenderType" = "Opaque"
             "RenderPipeline" = "UniversalPipeline"
             "UniversalMaterialType" = "Lit"
+            "MaterialType" = "Lit"
             "IgnoreProjector" = "True"
         }
         LOD 300
@@ -229,6 +230,7 @@ Shader "Universal Render Pipeline/Lit"
             Tags
             {
                 "LightMode" = "UniversalGBuffer"
+                "LightMode" = "GBuffer"
             }
 
             // -------------------------------------

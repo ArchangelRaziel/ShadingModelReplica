@@ -214,7 +214,8 @@ namespace UnityEngine.Rendering.Universal
         // GBuffer
         private DecalGBufferRenderPass m_GBufferRenderPass;
         private DecalDrawGBufferSystem m_DrawGBufferSystem;
-        private DeferredLights m_DeferredLights;
+        //private DeferredLights m_DeferredLights;
+        private ReplicaDeferredLights m_RDeferredLights;
 
         // Internal / Constants
         internal ref DecalSettings settings => ref m_Settings;
@@ -416,7 +417,8 @@ namespace UnityEngine.Rendering.Universal
 
                 case DecalTechnique.GBuffer:
 
-                    m_DeferredLights = universalRenderer.deferredLights;
+                    //m_DeferredLights = universalRenderer.deferredLights;
+                    m_RDeferredLights = universalRenderer.rDeferredLights;
 
                     m_DrawGBufferSystem = new DecalDrawGBufferSystem(m_DecalEntityManager);
                     m_GBufferRenderPass = new DecalGBufferRenderPass(m_ScreenSpaceSettings,
@@ -503,7 +505,8 @@ namespace UnityEngine.Rendering.Universal
                     renderer.EnqueuePass(m_ScreenSpaceDecalRenderPass);
                     break;
                 case DecalTechnique.GBuffer:
-                    m_GBufferRenderPass.Setup(m_DeferredLights);
+                    //m_GBufferRenderPass.Setup(m_DeferredLights);
+                    m_GBufferRenderPass.Setup(m_RDeferredLights);
                     renderer.EnqueuePass(m_GBufferRenderPass);
                     break;
                 case DecalTechnique.DBuffer:
@@ -547,7 +550,8 @@ namespace UnityEngine.Rendering.Universal
                     m_CopyDepthPass.MssaSamples = 1;
                 }
             }
-            else if (m_Technique == DecalTechnique.GBuffer && m_DeferredLights.UseRenderPass)
+            //else if (m_Technique == DecalTechnique.GBuffer && m_DeferredLights.UseRenderPass)
+            else if (m_Technique == DecalTechnique.GBuffer && m_RDeferredLights.UseRenderPass)
             {
                 // Need to call Configure for both of these passes to setup input attachments as first frame otherwise will raise errors
                 m_GBufferRenderPass.Configure(null, renderingData.cameraData.cameraTargetDescriptor);

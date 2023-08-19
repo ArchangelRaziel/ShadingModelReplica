@@ -18,7 +18,8 @@ namespace UnityEngine.Rendering.Universal
         private List<ShaderTagId> m_ShaderTagIdList;
         private DecalDrawGBufferSystem m_DrawSystem;
         private DecalScreenSpaceSettings m_Settings;
-        private DeferredLights m_DeferredLights;
+        //private DeferredLights m_DeferredLights;
+        private ReplicaDeferredLights m_RDeferredLights;
         private RTHandle[] m_GbufferAttachments;
         private bool m_DecalLayers;
         private PassData m_PassData;
@@ -41,12 +42,17 @@ namespace UnityEngine.Rendering.Universal
 
             m_PassData = new PassData();
         }
-
+        /*
         internal void Setup(DeferredLights deferredLights)
         {
             m_DeferredLights = deferredLights;
         }
-
+        */
+        internal void Setup (ReplicaDeferredLights deferredLights)
+        {
+            m_RDeferredLights = deferredLights;
+        }
+        /*
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
         {
             if (m_DeferredLights.UseRenderPass)
@@ -97,6 +103,59 @@ namespace UnityEngine.Rendering.Universal
             }
 
             ConfigureTarget(m_GbufferAttachments, m_DeferredLights.DepthAttachmentHandle);
+        }
+        */
+
+        public override void Configure (CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
+        {
+            if (m_RDeferredLights.UseRenderPass)
+            {
+                m_GbufferAttachments = new RTHandle[]
+                {
+                    m_RDeferredLights.GbufferAttachments[0], m_RDeferredLights.GbufferAttachments[1],
+                    m_RDeferredLights.GbufferAttachments[2], m_RDeferredLights.GbufferAttachments[3]
+                };
+
+                if (m_DecalLayers)
+                {
+                    var deferredInputAttachments = new RTHandle[]
+                    {
+                        m_RDeferredLights.GbufferAttachments[m_RDeferredLights.GbufferDepthIndex],
+                        m_RDeferredLights.GbufferAttachments[m_RDeferredLights.GBufferRenderingLayers],
+                    };
+
+                    var deferredInputIsTransient = new bool[]
+                    {
+                        true, false, // TODO: Make rendering layers transient
+                    };
+
+                    ConfigureInputAttachments(deferredInputAttachments, deferredInputIsTransient);
+                }
+                else
+                {
+                    var deferredInputAttachments = new RTHandle[]
+                    {
+                        m_RDeferredLights.GbufferAttachments[m_RDeferredLights.GbufferDepthIndex],
+                    };
+
+                    var deferredInputIsTransient = new bool[]
+                    {
+                        true,
+                    };
+
+                    ConfigureInputAttachments(deferredInputAttachments, deferredInputIsTransient);
+                }
+            }
+            else
+            {
+                m_GbufferAttachments = new RTHandle[]
+                {
+                        m_RDeferredLights.GbufferAttachments[0], m_RDeferredLights.GbufferAttachments[1],
+                        m_RDeferredLights.GbufferAttachments[2], m_RDeferredLights.GbufferAttachments[3]
+                };
+            }
+
+            ConfigureTarget(m_GbufferAttachments, m_RDeferredLights.DepthAttachmentHandle);
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
